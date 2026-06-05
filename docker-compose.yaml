@@ -1,0 +1,53 @@
+services:
+  udp-server:
+    build:
+      context: ./server
+      dockerfile: src/main/resources/Dockerfile
+    image: my-udp-server:v1
+    container_name: udp_echo_server_nf
+    ports:
+      - "8080:8080/udp"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 128M
+    volumes:
+      - vran_server_logs:/var/log/udp_server
+    networks:
+      - vran_private_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "echo ping | nc -u -w1 127.0.0.1 8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  udp-client:
+    build:
+      context: ./client
+      dockerfile:  src/main/resources/Dockerfile
+    image: my-udp-client:v1
+    container_name: udp_client_nf
+    depends_on:
+      udp-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 128M
+    networks:
+      - vran_private_net
+    restart: unless-stopped
+    command: ["udp-server", "8080"]
+
+volumes:
+  vran_server_logs:
+    name: vran_server_logs_volume
+
+networks:
+  vran_private_net:
+    driver: bridge
+    name: vran_private_bridge
