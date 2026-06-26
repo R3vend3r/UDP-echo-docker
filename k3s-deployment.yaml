@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: udp-echo
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: udp-server-pvc
+  namespace: udp-echo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udp-server
+  namespace: udp-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udp-server
+  template:
+    metadata:
+      labels:
+        app: udp-server
+    spec:
+      containers:
+        - name: udp-server
+          image: r3v3nd3r/udp-echo-server:latest
+          ports:
+            - containerPort: 8080
+              protocol: UDP
+          volumeMounts:
+            - name: server-data-volume
+              mountPath: /var/log/udp_server
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+            requests:
+              cpu: "250m"
+              memory: "64Mi"
+      volumes:
+        - name: server-data-volume
+          persistentVolumeClaim:
+            claimName: udp-server-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udp-server-service
+  namespace: udp-echo
+spec:
+  selector:
+    app: udp-server
+  ports:
+    - protocol: UDP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udp-client
+  namespace: udp-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udp-client
+  template:
+    metadata:
+      labels:
+        app: udp-client
+    spec:
+      containers:
+        - name: udp-client
+          image: r3v3nd3r/udp-echo-client:latest
+          command:
+            - sh
+            - -c
+            - |
+              while true; do
+                java UDPEchoClient udp-server-service 8080
+                sleep 5
+              done
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+            requests:
+              cpu: "250m"
+              memory: "64Mi"

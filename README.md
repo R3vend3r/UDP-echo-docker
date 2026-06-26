@@ -14,7 +14,8 @@ UDP-echo-docker/
 │   └── src/main/
 │       ├── java/UDPEchoClient.java        # Тестовый UDP-клиент
 │       └── resources/Dockerfile          # Образ клиента (multi-stage build)
-├── docker-compose.yaml                   # Оркестрация сервисов
+├── docker-compose.yaml                  # Для Docker Compose
+├── k3s-deployment.yaml                  # Для k3s/Kubernetes
 └── pom.xml                               # Maven-конфигурация
 ```
 
@@ -115,14 +116,19 @@ docker push localhost:5000/my-udp-server:v1
 docker tag my-udp-server:v1 <your-username>/my-udp-server:v1
 docker push <your-username>/my-udp-server:v1
 ```
+## Развертывание в k3s
+
+### Установка k3s
+```bash
+curl -sfL https://get.k3s.io | sh -
 
 ## Архитектура
 
 ```
-  Host
-  └─ port 8080/udp ──► vran_private_bridge
-                          ├─ udp_echo_server_nf  (:8080/udp)
-                          └─ udp_client_nf       (random port)
+Host
+└─ port 8080/udp ──► vran_private_bridge
+├─ udp_echo_server_nf  (:8080/udp)
+└─ udp_client_nf       (random port)
 ```
 
 Клиент общается с сервером по имени DNS-имени сервиса `udp-server` внутри сети Docker.
